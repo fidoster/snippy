@@ -3,7 +3,7 @@ import json
 import logging
 import asyncio
 import os
-import pandas as pd
+import csv
 from io import StringIO
 from tempfile import NamedTemporaryFile
 from lib.blob_storage import get_search_history, get_search_results, delete_blob, put_blob
@@ -21,12 +21,15 @@ def get_history():
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         
-        history = loop.run_until_complete(get_search_history())
-        
-        return jsonify({
-            "status": "success",
-            "history": history
-        })
+        try:
+            history = loop.run_until_complete(get_search_history())
+            
+            return jsonify({
+                "status": "success",
+                "history": history
+            })
+        finally:
+            loop.close()
         
     except Exception as e:
         logger.error(f"Error getting history: {str(e)}")
@@ -40,15 +43,18 @@ def get_history_results(search_id):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         
-        results = loop.run_until_complete(get_search_results(search_id))
-        
-        if not results:
-            return jsonify({"error": "Search not found"}), 404
+        try:
+            results = loop.run_until_complete(get_search_results(search_id))
             
-        return jsonify({
-            "status": "success",
-            "results": results
-        })
+            if not results:
+                return jsonify({"error": "Search not found"}), 404
+                
+            return jsonify({
+                "status": "success",
+                "results": results
+            })
+        finally:
+            loop.close()
         
     except Exception as e:
         logger.error(f"Error getting history results: {str(e)}")
@@ -62,20 +68,23 @@ def delete_search(search_id):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         
-        # Delete the search
-        success = loop.run_until_complete(delete_blob(search_id))
-        
-        if not success:
-            return jsonify({"error": "Failed to delete search"}), 500
+        try:
+            # Delete the search
+            success = loop.run_until_complete(delete_blob(search_id))
             
-        # Also update the search index
-        history = loop.run_until_complete(get_search_history())
-        updated_history = [h for h in history if h.get('id') != search_id]
-        
-        # Save updated index
-        loop.run_until_complete(put_blob("search_index", {"searches": updated_history}))
-        
-        return jsonify({"status": "success"})
+            if not success:
+                return jsonify({"error": "Failed to delete search"}), 500
+                
+            # Also update the search index
+            history = loop.run_until_complete(get_search_history())
+            updated_history = [h for h in history if h.get('id') != search_id]
+            
+            # Save updated index
+            loop.run_until_complete(put_blob("search_index", {"searches": updated_history}))
+            
+            return jsonify({"status": "success"})
+        finally:
+            loop.close()
         
     except Exception as e:
         logger.error(f"Error deleting search: {str(e)}")
@@ -89,26 +98,36 @@ def download_csv(search_id):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         
-        results = loop.run_until_complete(get_search_results(search_id))
-        
-        if not results:
-            return jsonify({"error": "Search not found"}), 404
+        try:
+            results = loop.run_until_complete(get_search_results(search_id))
             
-        # Convert to DataFrame and save as CSV
-        df = pd.DataFrame(results)
-        
-        # Create a temporary file
-        with NamedTemporaryFile(mode='w', delete=False, suffix='.csv') as temp_file:
-            df.to_csv(temp_file.name, index=False)
-            temp_filename = temp_file.name
-            
-        # Send the file
-        return send_file(
-            temp_filename,
-            as_attachment=True,
-            download_name=f"{search_id.split('/')[-1]}_results.csv",
-            mimetype='text/csv'
-        )
+            if not results:
+                return jsonify({"error": "Search not found"}), 404
+                
+            # Create CSV without pandas
+            with NamedTemporaryFile(mode='w', delete=False, suffix='.csv') as temp_file:
+                # Get all possible field names
+                fieldnames = set()
+                for result in results:
+                    fieldnames.update(result.keys())
+                
+                # Write CSV
+                writer = csv.DictWriter(temp_file, fieldnames=sorted(fieldnames))
+                writer.writeheader()
+                for result in results:
+                    writer.writerow(result)
+                
+                temp_filename = temp_file.name
+                
+            # Send the file
+            return send_file(
+                temp_filename,
+                as_attachment=True,
+                download_name=f"{search_id.split('/')[-1]}_results.csv",
+                mimetype='text/csv'
+            )
+        finally:
+            loop.close()
         
     except Exception as e:
         logger.error(f"Error downloading CSV: {str(e)}")

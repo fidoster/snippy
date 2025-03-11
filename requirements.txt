@@ -1,7 +1,6 @@
 Flask==2.3.2
 requests==2.31.0
 httpx==0.24.1
-pandas==2.0.3
 fuzzywuzzy==0.18.0
 python-Levenshtein==0.26.1
 gunicorn==21.2.0
