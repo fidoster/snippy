@@ -98,7 +98,7 @@
 {% if from_history %}
 <h2 class="centered-title" data-keywords="{{ keywords }}">Results for "{{ keywords }}"</h2>
 <div class="d-flex justify-content-between mb-4">
-    <a href="{{ url_for('routes.download_csv', keywords=keywords) }}" class="btn btn-success">Download CSV</a>
+    <a href="{{ url_for('history.download_csv', search_id=search_id) }}" class="btn btn-success">Download CSV</a>
     <button id="deleteNotJufoBtn" class="btn btn-danger">Delete All Non-JUFO Ranked</button>
 </div>
 {% endif %}

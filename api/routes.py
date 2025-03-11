@@ -4,18 +4,19 @@ from flask import Blueprint, request, jsonify, render_template
 import logging
 logger = logging.getLogger(__name__)
 
-# Create Blueprint - NOTE: No url_prefix means routes start at /
+# Create Blueprint
 routes_bp = Blueprint('routes', __name__)
 
 @routes_bp.route('/', methods=['GET'])
 def index():
     """Render the main search page"""
     try:
-        # First try rendering template
+        # Log for debugging
+        logger.info("Rendering index.html template")
         return render_template('index.html', from_history=False)
     except Exception as e:
-        # Fall back to JSON response if template rendering fails
-        logger.error(f"Error rendering template: {str(e)}")
+        # Log detailed error
+        logger.error(f"Error rendering template: {str(e)}", exc_info=True)
         return jsonify({
             "status": "error",
             "message": "Failed to render template",
