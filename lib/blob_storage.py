@@ -3,8 +3,8 @@ import json
 import time
 import uuid
 import logging
-from typing import Dict, List, Any, Optional, Union
 import httpx
+from typing import Dict, List, Any, Optional, Union
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -13,27 +13,18 @@ logger = logging.getLogger(__name__)
 VERCEL_BLOB_API_URL = "https://blob.vercel-storage.com"
 VERCEL_BLOB_STORE_ID = os.environ.get("BLOB_STORE_ID")
 VERCEL_BLOB_READ_WRITE_TOKEN = os.environ.get("BLOB_READ_WRITE_TOKEN")
+EDGE_CONFIG_ID = os.environ.get("EDGE_CONFIG_ID")
+EDGE_CONFIG_TOKEN = os.environ.get("EDGE_CONFIG_TOKEN")
 
 # Check if running in development mode
 IS_DEVELOPMENT = not os.environ.get("VERCEL")
 
-# For local development, use a simple file-based storage
-# Use /tmp for Vercel to avoid the read-only file system error
-LOCAL_STORAGE_DIR = os.path.join('/tmp' if os.environ.get("VERCEL") else os.path.dirname(os.path.dirname(__file__)), "local_storage")
+# For local development, use a simple file-based storage in /tmp
+LOCAL_STORAGE_DIR = os.path.join('/tmp', "local_storage")
 os.makedirs(LOCAL_STORAGE_DIR, exist_ok=True)
 
 async def put_blob(key: str, data: Union[str, dict, bytes], content_type: str = "application/json") -> Optional[str]:
-    """
-    Store data in Vercel Blob
-    
-    Args:
-        key: Unique identifier for the data
-        data: Data to store (string, dict, or bytes)
-        content_type: Content type of the data
-        
-    Returns:
-        URL of the stored blob if successful, None otherwise
-    """
+    """Store data in Vercel Blob"""
     try:
         if IS_DEVELOPMENT:
             # Local storage for development
@@ -95,15 +86,7 @@ async def put_blob(key: str, data: Union[str, dict, bytes], content_type: str = 
         return None
 
 async def get_blob(key: str) -> Optional[Union[dict, str]]:
-    """
-    Retrieve data from Vercel Blob
-    
-    Args:
-        key: Unique identifier for the data
-        
-    Returns:
-        Retrieved data (as dictionary if JSON, or string otherwise)
-    """
+    """Retrieve data from Vercel Blob"""
     try:
         if IS_DEVELOPMENT:
             # Local storage for development
@@ -149,15 +132,7 @@ async def get_blob(key: str) -> Optional[Union[dict, str]]:
         return None
 
 async def delete_blob(key: str) -> bool:
-    """
-    Delete data from Vercel Blob
-    
-    Args:
-        key: Unique identifier for the data
-        
-    Returns:
-        True if deletion was successful, False otherwise
-    """
+    """Delete data from Vercel Blob"""
     try:
         if IS_DEVELOPMENT:
             # Local storage for development
@@ -186,15 +161,7 @@ async def delete_blob(key: str) -> bool:
         return False
 
 async def list_blobs(prefix: str = "") -> List[Dict[str, Any]]:
-    """
-    List blobs with the given prefix
-    
-    Args:
-        prefix: Prefix to filter blobs
-        
-    Returns:
-        List of blob metadata
-    """
+    """List blobs with the given prefix"""
     try:
         if IS_DEVELOPMENT:
             # Local storage for development
@@ -234,18 +201,8 @@ async def list_blobs(prefix: str = "") -> List[Dict[str, Any]]:
         return []
 
 # Helper functions for storing common data types
-
 async def save_search_results(keywords: str, results: List[Dict[str, Any]]) -> bool:
-    """
-    Save search results to Blob storage
-    
-    Args:
-        keywords: Search keywords
-        results: Search results
-        
-    Returns:
-        True if successful, False otherwise
-    """
+    """Save search results to Blob storage"""
     timestamp = time.strftime("%Y%m%d%H%M%S")
     key = f"searches/{keywords.replace(' ', '_')}_{timestamp}"
     data = {
@@ -270,38 +227,19 @@ async def save_search_results(keywords: str, results: List[Dict[str, Any]]) -> b
     return False
 
 async def get_search_history() -> List[Dict[str, Any]]:
-    """
-    Get search history from Blob storage
-    
-    Returns:
-        List of search history entries
-    """
+    """Get search history from Blob storage"""
     index = await get_blob("search_index") or {"searches": []}
     return sorted(index.get("searches", []), key=lambda x: x.get("timestamp", ""), reverse=True)
 
 async def get_search_results(search_id: str) -> List[Dict[str, Any]]:
-    """
-    Get search results by ID
-    
-    Args:
-        search_id: Search ID
-        
-    Returns:
-        Search results
-    """
+    """Get search results by ID"""
     data = await get_blob(search_id)
     if data and isinstance(data, dict):
         return data.get("results", [])
     return []
 
 async def update_search_index(search_id: str, metadata: Dict[str, Any]):
-    """
-    Update the search index with new search metadata
-    
-    Args:
-        search_id: Search ID
-        metadata: Search metadata
-    """
+    """Update the search index with new search metadata"""
     # Get current index
     index = await get_blob("search_index") or {"searches": []}
     
@@ -311,4 +249,102 @@ async def update_search_index(search_id: str, metadata: Dict[str, Any]):
     # Save updated index
     await put_blob("search_index", index)
 
-# Add any other functions that might be needed by api/search.py or other parts of your application
+# Edge Config Functions
+async def get_edge_config_item(key: str) -> Optional[Any]:
+    """Get an item from Edge Config"""
+    try:
+        if IS_DEVELOPMENT:
+            # Check local file
+            filename = os.path.join(LOCAL_STORAGE_DIR, "edge_config.json")
+            if os.path.exists(filename):
+                with open(filename, 'r') as f:
+                    config = json.load(f)
+                    return config.get(key)
+            return None
+        
+        # Get from Edge Config
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"https://edge-config.vercel.com/items/{key}",
+                headers={
+                    "Authorization": f"Bearer {EDGE_CONFIG_TOKEN}",
+                    "X-Edge-Config-Id": EDGE_CONFIG_ID
+                }
+            )
+            
+            if response.status_code != 200:
+                if response.status_code == 404:
+                    return None
+                logger.error(f"Failed to get Edge Config item: {response.text}")
+                return None
+                
+            data = response.json()
+            return data.get("value")
+            
+    except Exception as e:
+        logger.error(f"Error getting Edge Config item {key}: {str(e)}")
+        return None
+
+async def set_edge_config_item(key: str, value: Any) -> bool:
+    """Set an item in Edge Config"""
+    try:
+        if IS_DEVELOPMENT:
+            # Save to local file
+            filename = os.path.join(LOCAL_STORAGE_DIR, "edge_config.json")
+            if os.path.exists(filename):
+                with open(filename, 'r') as f:
+                    config = json.load(f)
+            else:
+                config = {}
+                
+            config[key] = value
+            
+            with open(filename, 'w') as f:
+                json.dump(config, f, indent=2)
+            return True
+        
+        # Set in Edge Config
+        async with httpx.AsyncClient() as client:
+            response = await client.patch(
+                f"https://edge-config.vercel.com/items",
+                headers={
+                    "Authorization": f"Bearer {EDGE_CONFIG_TOKEN}",
+                    "X-Edge-Config-Id": EDGE_CONFIG_ID,
+                    "Content-Type": "application/json"
+                },
+                json={key: value}
+            )
+            
+            if response.status_code != 200:
+                logger.error(f"Failed to set Edge Config item: {response.text}")
+                return False
+                
+            return True
+            
+    except Exception as e:
+        logger.error(f"Error setting Edge Config item {key}: {str(e)}")
+        return False
+
+# JUFO-specific functions
+async def get_jufo_level(journal_name: str) -> Optional[int]:
+    """Get JUFO level for a journal from Edge Config cache"""
+    if not journal_name or journal_name == "Unknown":
+        return None
+        
+    # Get from Edge Config
+    jufo_cache = await get_edge_config_item("jufo_cache") or {}
+    return jufo_cache.get(journal_name)
+
+async def set_jufo_level(journal_name: str, level: Optional[int]) -> bool:
+    """Set JUFO level for a journal in Edge Config cache"""
+    if not journal_name or journal_name == "Unknown":
+        return False
+        
+    # Get current cache
+    jufo_cache = await get_edge_config_item("jufo_cache") or {}
+    
+    # Update cache
+    jufo_cache[journal_name] = level
+    
+    # Save updated cache
+    return await set_edge_config_item("jufo_cache", jufo_cache)
