@@ -53,6 +53,16 @@ def server_error(e):
 def from_json(value):
     import json
     return json.loads(value)
+# Update your index.py with this root route
+@app.route('/', methods=['GET'])
+def index_route():
+    """Debug root route"""
+    return jsonify({
+        "status": "debug",
+        "message": "This is the updated root route",
+        "registered_blueprints": [bp.name for bp in app.blueprints.values()],
+        "registered_routes": [str(rule) for rule in app.url_map.iter_rules()]
+    })
 
 if __name__ == '__main__':
     app.run(debug=True)
