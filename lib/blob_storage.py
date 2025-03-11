@@ -348,3 +348,230 @@ async def set_jufo_level(journal_name: str, level: Optional[int]) -> bool:
     
     # Save updated cache
     return await set_edge_config_item("jufo_cache", jufo_cache)
+
+# Project-related functions
+async def save_project(project_data: Dict[str, Any]) -> Optional[str]:
+    """
+    Save a project to blob storage
+    
+    Args:
+        project_data: Project data to save
+        
+    Returns:
+        Project ID if successful, None otherwise
+    """
+    project_id = project_data.get('id') or str(uuid.uuid4())
+    project_data['id'] = project_id
+    
+    # Store the project
+    key = f"projects/{project_id}"
+    url = await put_blob(key, project_data)
+    
+    if url:
+        return project_id
+    return None
+
+async def get_project(project_id: str) -> Optional[Dict[str, Any]]:
+    """
+    Get a project by ID
+    
+    Args:
+        project_id: Project ID
+        
+    Returns:
+        Project data if found, None otherwise
+    """
+    key = f"projects/{project_id}"
+    return await get_blob(key)
+
+async def get_all_projects() -> List[Dict[str, Any]]:
+    """
+    Get all projects
+    
+    Returns:
+        List of projects
+    """
+    # List all project blobs
+    blobs = await list_blobs(prefix="projects/")
+    
+    # Get each project
+    projects = []
+    for blob in blobs:
+        path = blob.get("pathname")
+        if path:
+            project_id = path.split("/")[-1]
+            project = await get_project(project_id)
+            if project:
+                projects.append(project)
+    
+    return projects
+
+async def delete_project(project_id: str) -> bool:
+    """
+    Delete a project
+    
+    Args:
+        project_id: Project ID
+        
+    Returns:
+        True if successful, False otherwise
+    """
+    # Delete project
+    key = f"projects/{project_id}"
+    success = await delete_blob(key)
+    
+    # Also delete associated sections
+    if success:
+        sections_blobs = await list_blobs(prefix=f"sections/{project_id}/")
+        for blob in sections_blobs:
+            path = blob.get("pathname")
+            if path:
+                await delete_blob(path)
+    
+    return success
+
+async def save_section(project_id: str, section_data: Dict[str, Any]) -> Optional[str]:
+    """
+    Save a section to a project
+    
+    Args:
+        project_id: Project ID
+        section_data: Section data to save
+        
+    Returns:
+        Section ID if successful, None otherwise
+    """
+    section_id = section_data.get('id') or str(uuid.uuid4())
+    section_data['id'] = section_id
+    
+    # Store the section
+    key = f"sections/{project_id}/{section_id}"
+    url = await put_blob(key, section_data)
+    
+    if url:
+        return section_id
+    return None
+
+async def get_sections(project_id: str) -> List[Dict[str, Any]]:
+    """
+    Get all sections for a project
+    
+    Args:
+        project_id: Project ID
+        
+    Returns:
+        List of sections
+    """
+    # List all section blobs for this project
+    blobs = await list_blobs(prefix=f"sections/{project_id}/")
+    
+    # Get each section
+    sections = []
+    for blob in blobs:
+        path = blob.get("pathname")
+        if path:
+            section = await get_blob(path)
+            if section:
+                sections.append(section)
+    
+    return sections
+
+async def delete_section(project_id: str, section_id: str) -> bool:
+    """
+    Delete a section
+    
+    Args:
+        project_id: Project ID
+        section_id: Section ID
+        
+    Returns:
+        True if successful, False otherwise
+    """
+    key = f"sections/{project_id}/{section_id}"
+    return await delete_blob(key)
+
+async def save_article(project_id: str, section_id: str, article_data: Dict[str, Any]) -> Optional[str]:
+    """
+    Save an article to a section
+    
+    Args:
+        project_id: Project ID
+        section_id: Section ID
+        article_data: Article data to save
+        
+    Returns:
+        Article ID if successful, None otherwise
+    """
+    article_id = article_data.get('id') or str(uuid.uuid4())
+    article_data['id'] = article_id
+    
+    # Get section
+    section = await get_blob(f"sections/{project_id}/{section_id}")
+    if not section:
+        return None
+    
+    # Add article to section
+    if 'articles' not in section:
+        section['articles'] = []
+    
+    # Check if article exists
+    for i, article in enumerate(section['articles']):
+        if article.get('id') == article_id:
+            # Update existing article
+            section['articles'][i] = article_data
+            break
+    else:
+        # Add new article
+        section['articles'].append(article_data)
+    
+    # Save updated section
+    key = f"sections/{project_id}/{section_id}"
+    url = await put_blob(key, section)
+    
+    if url:
+        return article_id
+    return None
+
+async def get_articles(project_id: str, section_id: str) -> List[Dict[str, Any]]:
+    """
+    Get all articles for a section
+    
+    Args:
+        project_id: Project ID
+        section_id: Section ID
+        
+    Returns:
+        List of articles
+    """
+    # Get section
+    section = await get_blob(f"sections/{project_id}/{section_id}")
+    if not section:
+        return []
+    
+    # Return articles
+    return section.get('articles', [])
+
+async def delete_article(project_id: str, section_id: str, article_id: str) -> bool:
+    """
+    Delete an article
+    
+    Args:
+        project_id: Project ID
+        section_id: Section ID
+        article_id: Article ID
+        
+    Returns:
+        True if successful, False otherwise
+    """
+    # Get section
+    section = await get_blob(f"sections/{project_id}/{section_id}")
+    if not section:
+        return False
+    
+    # Remove article
+    if 'articles' in section:
+        section['articles'] = [a for a in section['articles'] if a.get('id') != article_id]
+    
+    # Save updated section
+    key = f"sections/{project_id}/{section_id}"
+    return await put_blob(key, section) is not None
