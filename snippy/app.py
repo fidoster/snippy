@@ -32,14 +32,14 @@ def create_app():
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key')
     app.config['DEBUG'] = os.environ.get('FLASK_ENV', 'development') == 'development'
     
-    # Register API blueprints
+    # Register API blueprints - updated blueprint name
     app.register_blueprint(search_bp)
     app.register_blueprint(history_bp)
-    app.register_blueprint(projects_bp)
+    app.register_blueprint(projects_bp)  # Now named 'projects_api'
     
-    # Register UI blueprints
+    # Register UI blueprints - updated blueprint name
     app.register_blueprint(routes_bp)
-    app.register_blueprint(projects_ui_bp)
+    app.register_blueprint(projects_ui_bp)  # Now named 'projects_ui'
     
     # Register error handlers
     @app.errorhandler(404)

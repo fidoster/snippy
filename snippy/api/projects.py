@@ -16,10 +16,10 @@ from lib.blob_storage import (
 logger = logging.getLogger(__name__)
 
 # Create Blueprint for REST API
-projects_bp = Blueprint('projects', __name__, url_prefix='/api/projects')
+projects_bp = Blueprint('projects_api', __name__, url_prefix='/api/projects')
 
 # Create Blueprint for Web UI
-projects_ui_bp = Blueprint('projects', __name__, url_prefix='/projects')
+projects_ui_bp = Blueprint('projects_ui', __name__, url_prefix='/projects')
 
 # API Routes
 @projects_bp.route('', methods=['GET'])
@@ -384,7 +384,7 @@ def new_project():
             flash('Failed to save project', 'error')
             return render_template('project_form.html')
             
-        return redirect(url_for('projects.list_projects'))
+        return redirect(url_for('projects_ui.list_projects'))
         
     except Exception as e:
         logger.error(f"Error creating project: {str(e)}")
@@ -404,7 +404,7 @@ def project_detail(project_id):
         
         if not project:
             flash('Project not found', 'error')
-            return redirect(url_for('projects.list_projects'))
+            return redirect(url_for('projects_ui.list_projects'))
             
         # Get project sections
         sections = loop.run_until_complete(get_sections(project_id))
@@ -420,7 +420,7 @@ def project_detail(project_id):
     except Exception as e:
         logger.error(f"Error rendering project detail: {str(e)}")
         flash(f'Error: {str(e)}', 'error')
-        return redirect(url_for('projects.list_projects'))
+        return redirect(url_for('projects_ui.list_projects'))
 
 @projects_ui_bp.route('/<project_id>/delete', methods=['POST'])
 def delete_project_route(project_id):
@@ -435,12 +435,12 @@ def delete_project_route(project_id):
         if not success:
             flash('Failed to delete project', 'error')
             
-        return redirect(url_for('projects.list_projects'))
+        return redirect(url_for('projects_ui.list_projects'))
         
     except Exception as e:
         logger.error(f"Error deleting project: {str(e)}")
         flash(f'Error: {str(e)}', 'error')
-        return redirect(url_for('projects.list_projects'))
+        return redirect(url_for('projects_ui.list_projects'))
 
 @projects_ui_bp.route('/<project_id>/section', methods=['POST'])
 def add_section(project_id):
@@ -450,7 +450,7 @@ def add_section(project_id):
         
         if not title:
             flash('Section title is required', 'error')
-            return redirect(url_for('projects.project_detail', project_id=project_id))
+            return redirect(url_for('projects_ui.project_detail', project_id=project_id))
             
         # Create section data
         section_data = {
@@ -469,12 +469,12 @@ def add_section(project_id):
         if not section_id:
             flash('Failed to save section', 'error')
             
-        return redirect(url_for('projects.project_detail', project_id=project_id))
+        return redirect(url_for('projects_ui.project_detail', project_id=project_id))
         
     except Exception as e:
         logger.error(f"Error adding section: {str(e)}")
         flash(f'Error: {str(e)}', 'error')
-        return redirect(url_for('projects.project_detail', project_id=project_id))
+        return redirect(url_for('projects_ui.project_detail', project_id=project_id))
 
 @projects_ui_bp.route('/section/<section_id>/delete', methods=['POST'])
 def delete_section(section_id):
@@ -485,7 +485,7 @@ def delete_section(section_id):
         
         if not project_id:
             flash('Project ID is required', 'error')
-            return redirect(url_for('projects.list_projects'))
+            return redirect(url_for('projects_ui.list_projects'))
             
         # Use asyncio to run async functions
         loop = asyncio.new_event_loop()
@@ -496,12 +496,12 @@ def delete_section(section_id):
         if not success:
             flash('Failed to delete section', 'error')
             
-        return redirect(url_for('projects.project_detail', project_id=project_id))
+        return redirect(url_for('projects_ui.project_detail', project_id=project_id))
         
     except Exception as e:
         logger.error(f"Error deleting section: {str(e)}")
         flash(f'Error: {str(e)}', 'error')
-        return redirect(url_for('projects.list_projects'))
+        return redirect(url_for('projects_ui.list_projects'))
 
 @projects_ui_bp.route('/<project_id>/section/<section_id>/search', methods=['POST'])
 def add_search_block(project_id, section_id):
@@ -511,7 +511,7 @@ def add_search_block(project_id, section_id):
         
         if not keywords:
             flash('Keywords are required', 'error')
-            return redirect(url_for('projects.project_detail', project_id=project_id))
+            return redirect(url_for('projects_ui.project_detail', project_id=project_id))
             
         # Use asyncio to run async functions
         loop = asyncio.new_event_loop()
@@ -528,7 +528,7 @@ def add_search_block(project_id, section_id):
         
         if not search_id:
             flash('Search not found', 'error')
-            return redirect(url_for('projects.project_detail', project_id=project_id))
+            return redirect(url_for('projects_ui.project_detail', project_id=project_id))
         
         # Get search results
         results = loop.run_until_complete(get_search_results(search_id))
@@ -538,7 +538,7 @@ def add_search_block(project_id, section_id):
         
         if not section:
             flash('Section not found', 'error')
-            return redirect(url_for('projects.project_detail', project_id=project_id))
+            return redirect(url_for('projects_ui.project_detail', project_id=project_id))
             
         # Add search block to section
         block_id = str(uuid.uuid4())
@@ -561,12 +561,12 @@ def add_search_block(project_id, section_id):
         if not success:
             flash('Failed to save search block', 'error')
             
-        return redirect(url_for('projects.project_detail', project_id=project_id))
+        return redirect(url_for('projects_ui.project_detail', project_id=project_id))
         
     except Exception as e:
         logger.error(f"Error adding search block: {str(e)}")
         flash(f'Error: {str(e)}', 'error')
-        return redirect(url_for('projects.project_detail', project_id=project_id))
+        return redirect(url_for('projects_ui.project_detail', project_id=project_id))
 
 @projects_ui_bp.route('/<project_id>/section/<section_id>/article/<article_id>/delete', methods=['POST'])
 def delete_article_route(project_id, section_id, article_id):
@@ -581,7 +581,7 @@ def delete_article_route(project_id, section_id, article_id):
         
         if not section:
             flash('Section not found', 'error')
-            return redirect(url_for('projects.project_detail', project_id=project_id))
+            return redirect(url_for('projects_ui.project_detail', project_id=project_id))
             
         # Remove article
         if "articles" in section:
@@ -593,12 +593,12 @@ def delete_article_route(project_id, section_id, article_id):
         if not success:
             flash('Failed to delete article', 'error')
             
-        return redirect(url_for('projects.project_detail', project_id=project_id))
+        return redirect(url_for('projects_ui.project_detail', project_id=project_id))
         
     except Exception as e:
         logger.error(f"Error deleting article: {str(e)}")
         flash(f'Error: {str(e)}', 'error')
-        return redirect(url_for('projects.project_detail', project_id=project_id))
+        return redirect(url_for('projects_ui.project_detail', project_id=project_id))
 
 @projects_ui_bp.route('/<project_id>/section/<section_id>/block/<block_id>/article/<article_index>/delete', methods=['POST'])
 def delete_article_from_block(project_id, section_id, block_id, article_index):
@@ -615,7 +615,7 @@ def delete_article_from_block(project_id, section_id, block_id, article_index):
         
         if not section:
             flash('Section not found', 'error')
-            return redirect(url_for('projects.project_detail', project_id=project_id))
+            return redirect(url_for('projects_ui.project_detail', project_id=project_id))
             
         # Find search block
         block = None
@@ -629,14 +629,14 @@ def delete_article_from_block(project_id, section_id, block_id, article_index):
                 
         if not block:
             flash('Search block not found', 'error')
-            return redirect(url_for('projects.project_detail', project_id=project_id))
+            return redirect(url_for('projects_ui.project_detail', project_id=project_id))
             
         # Remove article from results
         results = json.loads(block["results"])
         
         if article_index < 0 or article_index >= len(results):
             flash('Article index out of range', 'error')
-            return redirect(url_for('projects.project_detail', project_id=project_id))
+            return redirect(url_for('projects_ui.project_detail', project_id=project_id))
             
         results.pop(article_index)
         
@@ -649,9 +649,9 @@ def delete_article_from_block(project_id, section_id, block_id, article_index):
         if not success:
             flash('Failed to delete article from block', 'error')
             
-        return redirect(url_for('projects.project_detail', project_id=project_id))
+        return redirect(url_for('projects_ui.project_detail', project_id=project_id))
         
     except Exception as e:
         logger.error(f"Error deleting article from block: {str(e)}")
         flash(f'Error: {str(e)}', 'error')
-        return redirect(url_for('projects.project_detail', project_id=project_id))
+        return redirect(url_for('projects_ui.project_detail', project_id=project_id))
