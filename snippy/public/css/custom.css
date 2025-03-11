@@ -1,0 +1,186 @@
+/* Custom styles for Jester Research Tool */
+
+/* General Styles */
+body {
+    background-color: #f8f9fa;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.container {
+    max-width: 1200px;
+}
+
+/* Header and Logo */
+header {
+    margin-bottom: 1.5rem;
+}
+
+.logo {
+    max-height: 80px;
+    margin-bottom: 0.5rem;
+}
+
+/* Cards and Containers */
+.card {
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Search Form */
+#searchForm {
+    padding: 0.5rem;
+}
+
+#customYearRange {
+    transition: all 0.3s ease;
+}
+
+#customTargetJufo {
+    transition: all 0.3s ease;
+}
+
+/* Progress Bar */
+#progress-container {
+    margin-top: 1.5rem;
+}
+
+.progress {
+    border-radius: 0.5rem;
+    background-color: #e9ecef;
+    margin-bottom: 0.5rem;
+}
+
+.progress-bar {
+    transition: width 0.6s ease;
+    background-color: #007bff;
+}
+
+/* Results Table */
+#resultsTable {
+    margin-top: 1rem;
+    background-color: white;
+}
+
+.table-light th {
+    background-color: #f1f5f9;
+    padding: 0.75rem;
+}
+
+.sortable {
+    cursor: pointer;
+    position: relative;
+}
+
+.sortable:after {
+    content: '↕';
+    margin-left: 5px;
+    opacity: 0.5;
+}
+
+.sortable.asc:after {
+    content: '↑';
+    opacity: 1;
+}
+
+.sortable.desc:after {
+    content: '↓';
+    opacity: 1;
+}
+
+/* Filters */
+#filter-container {
+    background-color: #f1f5f9;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+/* Buttons and Actions */
+.btn {
+    border-radius: 0.25rem;
+    font-weight: 500;
+}
+
+.btn-primary {
+    background-color: #0d6efd;
+}
+
+.btn-primary:hover {
+    background-color: #0b5ed7;
+}
+
+.btn-success {
+    background-color: #198754;
+}
+
+.btn-success:hover {
+    background-color: #157347;
+}
+
+.btn-danger {
+    background-color: #dc3545;
+}
+
+.btn-danger:hover {
+    background-color: #bb2d3b;
+}
+
+/* History Page */
+.centered-title {
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+/* Footer */
+footer {
+    margin-top: 2rem;
+    color: #6c757d;
+    font-size: 0.875rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .logo {
+        max-height: 60px;
+    }
+    
+    h1 {
+        font-size: 1.75rem;
+    }
+    
+    .table-responsive {
+        overflow-x: auto;
+    }
+    
+    #searchForm .btn {
+        margin-top: 0.5rem;
+    }
+}
+
+/* Nav menu */
+.nav-link {
+    border-radius: 0.25rem;
+    transition: background-color 0.2s;
+}
+
+.nav-link:hover {
+    background-color: rgba(13, 110, 253, 0.1);
+}
+
+/* Utility Classes */
+.shadow-sm {
+    box-shadow: 0 .125rem .25rem rgba(0,0,0,.075);
+}
+
+.bg-primary-subtle {
+    background-color: rgba(13, 110, 253, 0.1);
+}
+
+.text-primary {
+    color: #0d6efd !important;
+}
