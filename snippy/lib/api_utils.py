@@ -4,6 +4,7 @@ import json
 from typing import List, Dict, Any, Optional
 from fuzzywuzzy import fuzz
 from .edge_config import get_jufo_level as get_cached_jufo_level, set_jufo_level
+from urllib.parse import quote  # Add this import for URL encoding
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -93,10 +94,10 @@ async def try_jufo_queries_in_sequence(query: str) -> Optional[List[Dict[str, An
     for param in ["nimi", "nimi", "issn"]:
         if param == "nimi":
             # First try exact match
-            url = f"{base_url}?{param}={httpx.utils.quote(query)}"
+            url = f"{base_url}?{param}={quote(query)}"  # Use quote instead of httpx.utils.quote
         else:
             # Then try wildcard search
-            url = f"{base_url}?{param}={httpx.utils.quote(f'*{query}*')}"
+            url = f"{base_url}?{param}={quote(f'*{query}*')}"  # Use quote instead of httpx.utils.quote
             
         data = await fetch_jufo_api(url)
         if data:
