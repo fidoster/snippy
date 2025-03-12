@@ -2,6 +2,7 @@ import asyncio
 import logging
 from typing import List, Dict, Any, Optional, Tuple
 import time
+import httpx
 from .api_utils import crossref_search, get_jufo_level
 
 # Configure logger
@@ -9,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 async def search(query: str, offset: int = 0, limit: int = 10, year_range: str = "all") -> List[Dict[str, Any]]:
     """
-    Search for academic articles
+    Search for academic articles with timeout handling
     
     Args:
         query: Search query
@@ -34,8 +35,15 @@ async def search(query: str, offset: int = 0, limit: int = 10, year_range: str =
                 except ValueError:
                     pass
         
-        # Search Crossref
-        results = await crossref_search(query, rows=limit, offset=offset)
+        # Search Crossref with timeout
+        try:
+            results = await asyncio.wait_for(
+                crossref_search(query, rows=limit, offset=offset),
+                timeout=6.0  # 6-second timeout for external API
+            )
+        except asyncio.TimeoutError:
+            logger.warning(f"Crossref search timed out for query: {query}")
+            return []
         
         # Filter by year if specified
         if year_start is not None:
@@ -59,7 +67,7 @@ async def search(query: str, offset: int = 0, limit: int = 10, year_range: str =
 
 async def enrich_with_jufo_levels(results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
-    Enrich search results with JUFO levels
+    Enrich search results with JUFO levels, with a limit on concurrent requests
     
     Args:
         results: Search results
@@ -69,16 +77,44 @@ async def enrich_with_jufo_levels(results: List[Dict[str, Any]]) -> List[Dict[st
     """
     enriched_results = []
     
-    for item in results:
-        journal = item.get("journal", "Unknown")
+    # Process in smaller batches to avoid overwhelming APIs
+    batch_size = 5
+    for i in range(0, len(results), batch_size):
+        batch = results[i:i+batch_size]
+        tasks = []
         
-        # Get JUFO level
-        level = await get_jufo_level(journal)
-        
-        # Add level to item
-        item["level"] = level
-        
-        enriched_results.append(item)
+        for item in batch:
+            journal = item.get("journal", "Unknown")
+            
+            # Create a task to get JUFO level with timeout
+            async def get_level_with_timeout(journal_name):
+                try:
+                    return await asyncio.wait_for(
+                        get_jufo_level(journal_name),
+                        timeout=3.0  # 3-second timeout per journal
+                    )
+                except asyncio.TimeoutError:
+                    logger.warning(f"JUFO level lookup timed out for: {journal_name}")
+                    return None
+                    
+            tasks.append(get_level_with_timeout(journal))
+            
+        # Wait for all tasks in this batch to complete
+        try:
+            levels = await asyncio.gather(*tasks)
+            
+            # Add levels to items
+            for j, level in enumerate(levels):
+                item = batch[j]
+                item["level"] = level
+                enriched_results.append(item)
+                
+        except Exception as e:
+            logger.error(f"Error processing JUFO batch: {str(e)}")
+            # Add items without levels
+            for item in batch:
+                item["level"] = None
+                enriched_results.append(item)
     
     return enriched_results
 
@@ -90,7 +126,7 @@ async def process_search_batch(
     target_jufo: Optional[int] = None
 ) -> Tuple[List[Dict[str, Any]], bool, int]:
     """
-    Process a batch of search results, enriching with JUFO levels
+    Process a batch of search results, enriching with JUFO levels, with better error handling
     
     Args:
         query: Search query
