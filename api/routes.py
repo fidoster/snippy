@@ -4,10 +4,10 @@ from flask import Blueprint, request, jsonify, render_template
 import logging
 logger = logging.getLogger(__name__)
 
-# Create Blueprint
-routes_bp = Blueprint('routes', __name__)
+# Create Blueprint - CHANGED NAME TO AVOID CONFLICT
+api_routes_bp = Blueprint('api_routes', __name__)
 
-@routes_bp.route('/', methods=['GET'])
+@api_routes_bp.route('/', methods=['GET'])
 def index():
     """Render the main search page"""
     try:
@@ -23,7 +23,7 @@ def index():
             "error": str(e)
         })
 
-@routes_bp.route('/health', methods=['GET'])
+@api_routes_bp.route('/health', methods=['GET'])
 def health():
     """Health check endpoint"""
     return jsonify({

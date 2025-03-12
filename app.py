@@ -8,6 +8,7 @@ from api.search import search_bp
 from api.history import history_bp
 from api.projects import projects_bp, projects_ui_bp
 from api.index import routes_bp
+from api.routes import api_routes_bp  # Import the renamed blueprint
 
 # Load environment variables
 load_dotenv()
@@ -32,14 +33,15 @@ def create_app():
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key')
     app.config['DEBUG'] = os.environ.get('FLASK_ENV', 'development') == 'development'
     
-    # Register API blueprints - updated blueprint name
+    # Register API blueprints
     app.register_blueprint(search_bp)
     app.register_blueprint(history_bp)
-    app.register_blueprint(projects_bp)  # Now named 'projects_api'
+    app.register_blueprint(projects_bp)
     
-    # Register UI blueprints - updated blueprint name
-    app.register_blueprint(routes_bp)
-    app.register_blueprint(projects_ui_bp)  # Now named 'projects_ui'
+    # Register UI blueprints
+    app.register_blueprint(routes_bp)  # This handles the main routes including history
+    app.register_blueprint(projects_ui_bp)
+    app.register_blueprint(api_routes_bp)  # Register the renamed blueprint from api.routes
     
     # Register error handlers
     @app.errorhandler(404)
