@@ -11,10 +11,11 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-# Import blueprints - IMPORTANT CHANGE: import routes_bp from api.index not api.routes
+# Import all necessary blueprints
 from api.search import search_bp
 from api.history import history_bp
-from api.index import routes_bp  # Import from api.index, not api.routes
+from api.index import routes_bp
+from api.projects import projects_bp, projects_ui_bp  # Add projects_ui_bp import
 
 # Create Flask app for serverless
 app = Flask(__name__, 
@@ -26,10 +27,12 @@ app = Flask(__name__,
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key')
 app.config['DEBUG'] = os.environ.get('FLASK_ENV', 'development') == 'development'
 
-# Register blueprints
+# Register all blueprints
 app.register_blueprint(search_bp)
 app.register_blueprint(history_bp)
-app.register_blueprint(routes_bp)  # This handles the main routes
+app.register_blueprint(routes_bp)
+app.register_blueprint(projects_bp)
+app.register_blueprint(projects_ui_bp)  # Register projects_ui_bp
 
 # Register error handlers
 @app.errorhandler(404)
